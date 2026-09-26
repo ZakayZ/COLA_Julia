@@ -1,0 +1,13 @@
+module_name = "COLANative"
+uuid = "16706b10-4113-4e96-b148-17aab77901a0"
+input = ["EventData.hh"]
+include_dirs = ["@COLA_EVENT_INCLUDE_DIR@"]
+cxx-std = "c++20"
+cxxwrap_version = "0.17"
+out_cxx_dir = "@BINDING_OUTPUT_DIR@"
+out_jl_dir = "@BINDING_OUTPUT_DIR@/julia"
+n_classes_per_file = 0
+fields_and_variables = true
+propagation_mode = "types"
+veto_list = "@CMAKE_CURRENT_SOURCE_DIR@/veto.txt"
+export = "all"

@@ -1,0 +1,19 @@
+name = "COLA"
+uuid = "e8fb5d31-b8d4-4e67-9fe8-a5a2e74aa831"
+version = "0.2.0"
+
+[deps]
+CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
+Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+libcxxwrap_julia_jll = "3eaa8342-bff7-56a5-9981-c04077f7cee7"
+
+[compat]
+CxxWrap = "0.17"
+libcxxwrap_julia_jll = "=0.14.10"
+julia = "1.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
