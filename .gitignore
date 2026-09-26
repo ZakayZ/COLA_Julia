@@ -1,0 +1,46 @@
+# CMake build trees and in-source artifacts
+/build/
+/build-*/
+/cmake-build-*/
+/CMakeCache.txt
+/CMakeFiles/
+/CTestTestfile.cmake
+/DartConfiguration.tcl
+/Makefile
+/cmake_install.cmake
+/compile_commands.json
+/install_manifest.txt
+/_deps/
+/Testing/
+/build.ninja
+/rules.ninja
+/.ninja_deps
+/.ninja_log
+
+# Compiled libraries, objects, and debug symbols
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dSYM/
+/julia/COLA/deps/
+
+# Local Julia state.
+/.julia_depot/
+/examples/*/Manifest.toml
+/julia/COLA/Manifest.toml
+/bindings/Manifest.toml
+/bindings/*-report.txt
+*.ji
+*.cov
+*.mem
+
+# IDE, tooling, and OS metadata
+/.cache/
+/.idea/
+/.vscode/
+.DS_Store
+*.swp
+*.swo
+*~
