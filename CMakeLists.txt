@@ -28,6 +28,10 @@ set(JlCxx_DIR
 find_package(JlCxx REQUIRED)
 
 set(COLA_MODULE_NAME COLA_Julia)
+set(COLA_JULIA_PACKAGE_DIR
+    "${CMAKE_BINARY_DIR}/julia/COLA"
+    CACHE PATH "Julia package output directory"
+)
 add_subdirectory(bindings)
 add_library(${COLA_MODULE_NAME} SHARED COLA_Julia/JuliaFilters.cc COLA_Julia/Module.cc)
 target_compile_features(${COLA_MODULE_NAME} PRIVATE cxx_std_20)
@@ -44,6 +48,7 @@ add_dependencies(${COLA_MODULE_NAME} COLA_JuliaBindings)
 set_target_properties(
     ${COLA_MODULE_NAME}
     PROPERTIES VERSION "${PROJECT_VERSION}"
+               LIBRARY_OUTPUT_DIRECTORY "${COLA_JULIA_PACKAGE_DIR}/deps/lib/COLA_Julia"
                SOVERSION "${PROJECT_VERSION_MAJOR}"
                CXX_CLANG_TIDY "${COLA_CMAKE_CXX_CLANG_TIDY}"
                BUILD_RPATH

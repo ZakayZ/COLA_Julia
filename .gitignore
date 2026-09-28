@@ -24,12 +24,14 @@
 *.so.*
 *.dylib
 *.dSYM/
-/julia/COLA/deps/
+/deps/build/
+/deps/lib/
+/deps/build.log
 
 # Local Julia state.
 /.julia_depot/
 /examples/*/Manifest.toml
-/julia/COLA/Manifest.toml
+/Manifest.toml
 /bindings/Manifest.toml
 /bindings/*-report.txt
 *.ji

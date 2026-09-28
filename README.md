@@ -6,7 +6,31 @@ package runs in Julia's REPL, in `Pkg.test()`, and in an embedded COLA calculati
 The build targets macOS and Linux; this rewrite
 has been validated on Apple Silicon macOS. Linux has not yet been validated.
 
-## Build
+## Build with Julia's package manager
+
+Install COLA, Julia, CMake and a C++20 compiler first. The repository root is
+the Julia package; it includes the native sources needed for a local build.
+
+```julia
+using Pkg
+ENV["COLA_DIR"] = "/path/to/cola/install/lib/cmake/COLA"
+Pkg.develop(path="/path/to/COLA_Julia")
+Pkg.build("COLA")
+Pkg.test("COLA")
+```
+
+Pkg resolves the declared CxxWrap and WrapIt dependencies. `deps/build.jl`
+uses that same environment and Julia executable to compile both libraries.
+It does not install system tools or modify the existing COLA installation.
+Build files go to `deps/build`, bindings to `deps/libCOLA_JuliaBindings`,
+with the platform library extension, and the adapter to `deps/lib/COLA_Julia`.
+Pass the package's `deps/lib` directory to COLA's module loader. It can be
+located with `normpath(joinpath(dirname(pathof(COLA)), "..", "deps", "lib"))`.
+Use the same Julia dependency environment for the calculation, and rebuild
+after changing native dependencies. `COLA_DIR` is optional if CMake can already
+find the installed COLA package.
+
+## Build directly with CMake
 
 Install Julia (including libjulia), COLA, CMake and a C++20 compiler.
 CxxWrap and WrapIt must already be installed in the selected Julia environment.
@@ -183,7 +207,7 @@ cross-thread use is unsupported and is not checked at runtime.
 Each C++ filter handle retains its Julia object using CxxWrap's
 persistent GC roots. Destruction calls `close!` and releases the root, including
 when `close!` throws. Julia does not maintain an ID-to-filter dictionary.
-The internal Julia adapter in `julia/COLA/src/bridge.jl` resolves qualified types,
+The internal Julia adapter in `src/bridge.jl` resolves qualified types,
 validates their kind, constructs filters using their schemas, dispatches callbacks,
 and captures exceptions with backtraces. C++ provides the COLA interfaces, runtime
 lifetime, and RAII ownership; there is no duplicate lookup or dispatch logic in C++.
