@@ -27,6 +27,7 @@
 /deps/build/
 /deps/lib/
 /deps/build.log
+/deps/deps.jl
 
 # Local Julia state.
 /.julia_depot/

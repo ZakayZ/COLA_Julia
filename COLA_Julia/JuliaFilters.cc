@@ -51,8 +51,8 @@ namespace cola::jl {
         }
         jl_init();
         try {
-          auto* loaded = jl_eval_string("using COLA");
-          if (loaded == nullptr || jl_exception_occurred() != nullptr) {
+          jl_eval_string("using COLA");
+          if (jl_exception_occurred() != nullptr) {
             jl_call2(jl_get_function(jl_base_module, "showerror"), jl_stderr_obj(), jl_exception_occurred());
             throw std::runtime_error("Cannot load COLA; install it in the active Julia environment before running");
           }
@@ -68,14 +68,6 @@ namespace cola::jl {
   class JuliaFilterHandle {
    public:
     explicit JuliaFilterHandle(const Metadata& metadata) : object_(Create(metadata)) {}
-
-    JuliaFilterHandle(const JuliaFilterHandle&) = delete;
-
-    JuliaFilterHandle& operator=(const JuliaFilterHandle&) = delete;
-
-    JuliaFilterHandle(JuliaFilterHandle&&) = delete;
-
-    JuliaFilterHandle& operator=(JuliaFilterHandle&&) = delete;
 
     void Run(EventData& event) const { Runtime::Instance().Invoke("_process_event", object_.get(), event); }
 
@@ -136,7 +128,5 @@ namespace cola::jl {
 
   JuliaWriter::~JuliaWriter() = default;
 
-  void JuliaWriter::operator()(std::unique_ptr<EventData>&& event) {
-    handle_->Run(*event);
-  }
+  void JuliaWriter::operator()(std::unique_ptr<EventData>&& event) { handle_->Run(*event); }
 }  // namespace cola::jl

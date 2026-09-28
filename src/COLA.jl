@@ -2,11 +2,17 @@ module COLA
 
 using CxxWrap
 
+isfile(joinpath(@__DIR__, "..", "deps", "deps.jl")) || error("Run Pkg.build(\"COLA\") before loading COLA.")
+include("../deps/deps.jl")
+"""Installation prefix of COLA's native Julia module and CMake package."""
+prefix_path() = _native_prefix
+
 module Native
 using CxxWrap, Libdl
+using ..COLA: prefix_path
 function library_path()
-    path = joinpath(@__DIR__, "..", "deps", "libCOLA_JuliaBindings." * Libdl.dlext)
-    isfile(path) || error("COLA bindings not found at $path. Run Pkg.build(\"COLA\") or use the CMake-installed package.")
+    path = joinpath(prefix_path(), "lib", "COLA_Julia", "bindings", "libCOLA_JuliaBindings." * Libdl.dlext)
+    isfile(path) || error("COLA bindings not found at $path. Run Pkg.build(\"COLA\").")
     return path
 end
 @wrapmodule(library_path, :define_cola_julia)
@@ -80,11 +86,7 @@ _parse(::Type{T}, value::AbstractString) where {T} = parse(T, value)
 _parse(::Type{T}, value) where {T} = convert(T, value)
 function _parameter_value(name, spec::Parameter{T}, metadata) where {T}
     if haskey(metadata, name)
-        try
-            return _parse(T, metadata[name])
-        catch
-            throw(ArgumentError("invalid value for parameter '$name': $(repr(metadata[name])); expected $T"))
-        end
+        return _parse(T, metadata[name])
     end
     spec.default isa Required && throw(ArgumentError("missing required parameter '$name'"))
     return _parse(T, spec.default)

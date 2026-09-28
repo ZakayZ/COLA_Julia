@@ -7,11 +7,20 @@ end
 RequiredParameterFilter(; count) = RequiredParameterFilter(count)
 COLA.parameters(::Type{RequiredParameterFilter}) = (count=parameter(Int),)
 
+struct CustomParameter end
+Base.parse(::Type{CustomParameter}, value::AbstractString) = throw(DomainError(value, "custom parser failure"))
+struct CustomParameterFilter <: Converter
+    value::CustomParameter
+end
+CustomParameterFilter(; value) = CustomParameterFilter(value)
+COLA.parameters(::Type{CustomParameterFilter}) = (value=parameter(CustomParameter),)
+
 @testset "Type-based parameter schema" begin
     @test construct(RequiredParameterFilter; count="3").count == 3
     @test_throws ArgumentError construct(RequiredParameterFilter)
     @test_throws ArgumentError construct(RequiredParameterFilter; count="bad")
     @test_throws ArgumentError construct(RequiredParameterFilter; count=3, unknown=1)
+    @test_throws DomainError construct(CustomParameterFilter; value="bad")
 end
 
 @testset "Native call boundary" begin

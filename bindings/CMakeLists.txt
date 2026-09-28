@@ -35,31 +35,10 @@ target_include_directories(
 )
 target_compile_features(COLA_JuliaBindings PRIVATE cxx_std_20)
 target_link_libraries(COLA_JuliaBindings PRIVATE COLA JlCxx::cxxwrap_julia JlCxx::cxxwrap_julia_stl)
-set_target_properties(
-    COLA_JuliaBindings PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${COLA_JULIA_PACKAGE_DIR}/deps"
-                                  INSTALL_RPATH_USE_LINK_PATH TRUE
-)
+set_target_properties(COLA_JuliaBindings PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-set(COLA_API_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
-file(
-    GLOB_RECURSE COLA_API_FILES CONFIGURE_DEPENDS
-    RELATIVE "${COLA_API_SOURCE_DIR}"
-    "${COLA_API_SOURCE_DIR}/src/*.jl" "${COLA_API_SOURCE_DIR}/test/*.jl"
-    "${COLA_API_SOURCE_DIR}/Project.toml"
-)
-if (NOT COLA_API_SOURCE_DIR STREQUAL COLA_JULIA_PACKAGE_DIR)
-    foreach (file IN LISTS COLA_API_FILES)
-        configure_file(
-            "${COLA_API_SOURCE_DIR}/${file}" "${COLA_JULIA_PACKAGE_DIR}/${file}" COPYONLY
-        )
-    endforeach ()
-endif ()
-install(DIRECTORY "${COLA_API_SOURCE_DIR}/src" "${COLA_API_SOURCE_DIR}/test"
-        DESTINATION "${CMAKE_INSTALL_DATADIR}/COLA_Julia/julia/COLA"
-)
-install(FILES "${COLA_API_SOURCE_DIR}/Project.toml"
-        DESTINATION "${CMAKE_INSTALL_DATADIR}/COLA_Julia/julia/COLA"
-)
+# Keep bindings below the module directory: COLA scans its immediate libraries
+# for the LoadCOLAModule entry point, which only the adapter provides.
 install(TARGETS COLA_JuliaBindings
-        LIBRARY DESTINATION "${CMAKE_INSTALL_DATADIR}/COLA_Julia/julia/COLA/deps"
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/COLA_Julia/bindings"
 )

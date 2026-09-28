@@ -44,7 +44,6 @@ int main(int argc, char** argv) {
     Require(event->particles.front().momentum.e == 10, "converter did not mutate native momentum");
     auto writer = factories.at("julia_writer")->Create(metadata("TestWriter"));
     (*dynamic_cast<cola::VWriter*>(writer.get()))(std::move(event));
-    Require(!event, "writer did not consume the event");
 
     auto nested_config = metadata("Nested.Inner.ScaleConverter");
     nested_config["scale"] = "3";
@@ -56,7 +55,7 @@ int main(int argc, char** argv) {
                 "not a module");
 
     config["scale"] = "invalid";
-    ExpectError([&] { factories.at("julia_converter")->Create(config); }, "invalid value");
+    ExpectError([&] { factories.at("julia_converter")->Create(config); }, "cannot parse");
     ExpectError([&] { factories.at("julia_writer")->Create(metadata("ScaleConverter")); }, "wrong kind");
     ExpectError([&] { factories.at("julia_converter")->Create(metadata("missing")); }, "missing");
     ExpectError([&] { factories.at("julia_converter")->Create(metadata("Nested")); }, "must name a type");

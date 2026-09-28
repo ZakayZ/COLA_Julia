@@ -3,7 +3,7 @@ add_test(
     NAME cola-julia-prepare
     COMMAND
         "${Julia_EXECUTABLE}" --startup-file=no "${CMAKE_CURRENT_SOURCE_DIR}/prepare.jl"
-        "${TEST_JULIA_PROJECT}" "${CMAKE_BINARY_DIR}/julia/COLA"
+        "${TEST_JULIA_PROJECT}" "${PROJECT_SOURCE_DIR}"
         "${PROJECT_SOURCE_DIR}/examples/julia-filters"
 )
 set_tests_properties(cola-julia-prepare PROPERTIES FIXTURES_SETUP JuliaEnvironment)
@@ -19,11 +19,9 @@ target_compile_features(cola-julia-filters-test PRIVATE cxx_std_20)
 # Intentionally link only COLA: exercise the real dlopen module loader.
 target_link_libraries(cola-julia-filters-test PRIVATE COLA)
 add_dependencies(cola-julia-filters-test ${COLA_MODULE_NAME})
-set_target_properties(
-    ${COLA_MODULE_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-                                   "${CMAKE_BINARY_DIR}/modules/COLA_Julia"
+add_test(NAME cola-julia-all-filters COMMAND cola-julia-filters-test
+                                             "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}"
 )
-add_test(NAME cola-julia-all-filters COMMAND cola-julia-filters-test "${CMAKE_BINARY_DIR}/modules")
 set_tests_properties(
     cola-julia-all-filters PROPERTIES FIXTURES_REQUIRED JuliaEnvironment ENVIRONMENT
                                       "JULIA_PROJECT=${TEST_JULIA_PROJECT}"

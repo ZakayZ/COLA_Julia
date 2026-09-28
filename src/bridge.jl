@@ -1,6 +1,5 @@
 # Internal embedding adapter. C++ retains the returned objects with RAII roots;
 # this file neither owns them nor maintains a registry of instances.
-@enum FilterKind::UInt8 GENERATOR CONVERTER WRITER
 
 function _invoke_with_error_capture(f, args...)
     try
@@ -30,7 +29,7 @@ function _create_filter(kind::UInt8, keys, values)
     isempty(path) && throw(ArgumentError("Julia filter requires 'filter'"))
     pop!(metadata, :name, nothing) # COLA's factory selector, not a user parameter.
     T = _resolve_filter_type(path)
-    expected = (Generator, Converter, Writer)[Int(FilterKind(kind)) + 1]
+    expected = (Generator, Converter, Writer)[Int(kind) + 1]
     T <: expected || error("filter '$path' has the wrong kind")
     # Package loading above may introduce new schema and constructor methods.
     object = Base.invokelatest(construct, T; metadata...)
