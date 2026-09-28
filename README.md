@@ -54,7 +54,8 @@ end
 
 Place this code in your package module, for example `MyPhysics`.
 Use `COLA.construct(ScaleConverter; scale="2")` to test parameter parsing.
-See [examples/julia-filters](examples/julia-filters) for generators, writers and tests.
+See the [examples branch](https://github.com/ZakayZ/COLA_Julia/tree/examples/examples/julia-filters)
+for generators, writers and tests.
 
 Borrowed events and field references must not outlive their callback. Changes
 to particle-vector storage can invalidate particle references. Embedded Julia
@@ -101,8 +102,8 @@ using Pkg
 Pkg.test("COLA")
 ```
 
-For installed-library integration tests, add `examples/julia-filters` to the
-same environment with `Pkg.develop(path="examples/julia-filters")`, then run:
+For installed-library integration tests, add `tests/fixtures/JuliaTestFilters` to the
+same environment with `Pkg.develop(path="tests/fixtures/JuliaTestFilters")`, then run:
 
 ```shell
 cmake -S tests/consumer -B build-consumer

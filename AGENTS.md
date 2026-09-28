@@ -19,7 +19,8 @@ features, extra configuration and bulk-operation APIs. Windows is out of scope.
 - `bindings/`: WrapIt configuration, generation target and manual accessors.
 - `deps/build.jl`: Pkg entry point for native build and installation.
 - `cmake/`: installed package configuration template.
-- `examples/julia-filters/`: ordinary Julia example package with its own tests.
+- Examples live only on the `examples` branch; do not merge them into `main`.
+- `tests/fixtures/JuliaTestFilters/`: Julia fixtures for integration tests.
 - `tests/`: C++ integration tests; `tests/consumer/` is a separate CMake project
   using only installed native targets/libraries.
 
@@ -63,7 +64,7 @@ features, extra configuration and bulk-operation APIs. Windows is out of scope.
 ## Verification
 
 Use the README's installation and test commands. Run `Pkg.test("COLA")` and the
-example's Julia tests. For native packaging changes, configure `tests/consumer`
+fixture package's Julia tests. For native packaging changes, configure `tests/consumer`
 against the installed prefix, then run both its linked and plugin tests with
 `JULIA_PROJECT` set to an environment containing COLA and JuliaTestFilters.
 Test significant packaging changes from a temporary copy outside the checkout;

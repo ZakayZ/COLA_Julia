@@ -1,6 +1,6 @@
 using Test, COLA, JuliaTestFilters
 
-@testset "Pure Julia filter package" begin
+@testset "Julia integration fixtures" begin
     event = EventData()
     generate!(JuliaTestFilters.TestGenerator(), event)
     @test energy(initial_state(event)) == 42.0

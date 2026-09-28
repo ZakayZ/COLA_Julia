@@ -4,7 +4,7 @@ add_test(
     COMMAND
         "${Julia_EXECUTABLE}" --startup-file=no "${CMAKE_CURRENT_SOURCE_DIR}/prepare.jl"
         "${TEST_JULIA_PROJECT}" "${PROJECT_SOURCE_DIR}"
-        "${PROJECT_SOURCE_DIR}/examples/julia-filters"
+        "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/JuliaTestFilters"
 )
 set_tests_properties(cola-julia-prepare PROPERTIES FIXTURES_SETUP JuliaEnvironment)
 
