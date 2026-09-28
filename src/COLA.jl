@@ -6,7 +6,7 @@ module Native
 using CxxWrap, Libdl
 function library_path()
     path = joinpath(@__DIR__, "..", "deps", "libCOLA_JuliaBindings." * Libdl.dlext)
-    isfile(path) || error("COLA bindings not found at $path. Use the CMake-built/installed COLA package.")
+    isfile(path) || error("COLA bindings not found at $path. Run Pkg.build(\"COLA\") or use the CMake-installed package.")
     return path
 end
 @wrapmodule(library_path, :define_cola_julia)
