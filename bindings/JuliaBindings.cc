@@ -12,6 +12,7 @@ JLCXX_MODULE define_cola_julia(jlcxx::Module& module) {
   using cola::EventIniState;
   using cola::LorentzVector;
   using cola::Particle;
+  module.method("copy_event", [](const EventData& event) { return EventData(event); });
   module.method("initial_state", [](EventData& event) -> EventIniState& { return event.ini_state; });
   module.method("particles", [](EventData& event) -> cola::EventParticles& { return event.particles; });
   module.method("initial_state_particles",

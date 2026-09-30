@@ -60,3 +60,11 @@ end
     empty!(particles(event))
     @test isempty(particles(event))
 end
+
+@testset "Event copying" begin
+    source = EventData()
+    set_energy!(initial_state(source), 3.0)
+    snapshot = copy(source)
+    set_energy!(initial_state(source), 4.0)
+    @test energy(initial_state(snapshot)) == 3.0
+end
