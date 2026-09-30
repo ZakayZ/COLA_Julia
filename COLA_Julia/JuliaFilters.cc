@@ -17,6 +17,12 @@ namespace cola::jl {
     // All embedding calls, including finalization, execute on the initializing thread.
     class Runtime {
      public:
+      struct ValueDeleter {
+        void operator()(jl_value_t* value) const noexcept { jlcxx::unprotect_from_gc(value); }
+      };
+
+      using Value = std::unique_ptr<jl_value_t, ValueDeleter>;
+
       static Runtime& Instance() {
         static Runtime runtime;
         return runtime;
@@ -25,7 +31,7 @@ namespace cola::jl {
       ~Runtime() { jl_atexit_hook(0); }
 
       template <typename... Args>
-      jl_value_t* Invoke(const char* name, Args&&... args) {
+      auto Invoke(const char* name, Args&&... args) {
         jlcxx::JuliaFunction function(name, "COLA");
         jlcxx::JuliaFunction guard("_invoke_with_error_capture", "COLA");
         auto* result = guard(function.pointer(), std::forward<Args>(args)...);
@@ -33,15 +39,15 @@ namespace cola::jl {
           throw std::runtime_error("Julia invocation failed (see Julia diagnostic)");
         }
         JL_GC_PUSH1(&result);
-        auto* error = jl_get_nth_field(result, 1);
-        if (error != jl_nothing) {
+        if (auto* error = jl_get_nth_field(result, 1); error != jl_nothing) {
           // Unwind the Julia root frame before propagating a C++ exception.
           JL_GC_POP();
           throw std::runtime_error(jl_string_ptr(error));
         }
         auto* value = jl_get_nth_field(result, 0);
+        jlcxx::protect_from_gc(value);
         JL_GC_POP();
-        return value;
+        return Value(value);
       }
 
      private:
@@ -64,12 +70,24 @@ namespace cola::jl {
     };
   }  // namespace
 
-  template <FilterType Kind>
+  template <FilterType Kind, bool Unsafe>
   class JuliaFilterHandle {
    public:
     explicit JuliaFilterHandle(const Metadata& metadata) : object_(Create(metadata)) {}
 
-    void Run(EventData& event) const { Runtime::Instance().Invoke("_process_event", object_.get(), event); }
+    std::unique_ptr<EventData> Generate() const {
+      return CopyEvent(Runtime::Instance().Invoke("_generate_event", object_.get()).get());
+    }
+
+    std::unique_ptr<EventData> Convert(const EventData& event) const {
+      return CopyEvent(Runtime::Instance().Invoke("_convert_event", object_.get(), event).get());
+    }
+
+    void Write(const EventData& event) const { Runtime::Instance().Invoke("_write_event", object_.get(), event); }
+
+    void RunUnsafe(EventData& event) const {
+      Runtime::Instance().Invoke("_process_unsafe_event", object_.get(), event);
+    }
 
    private:
     struct FilterDeleter {
@@ -94,10 +112,16 @@ namespace cola::jl {
         keys.push_back(key);
         values.push_back(value);
       }
-      auto* object = Runtime::Instance().Invoke("_create_filter", static_cast<std::uint8_t>(Kind), keys, values);
-      jlcxx::protect_from_gc(object);
-      return FilterPtr(object);
+      if constexpr (Unsafe) {
+        return FilterPtr(Runtime::Instance()
+                             .Invoke("_create_unsafe_filter", static_cast<std::uint8_t>(Kind), keys, values)
+                             .release());
+      }
+      return FilterPtr(
+          Runtime::Instance().Invoke("_create_filter", static_cast<std::uint8_t>(Kind), keys, values).release());
     }
+
+    static auto CopyEvent(jl_value_t* value) { return std::make_unique<EventData>(*jlcxx::unbox<EventData*>(value)); }
 
     FilterPtr object_;
   };
@@ -107,11 +131,7 @@ namespace cola::jl {
 
   JuliaGenerator::~JuliaGenerator() = default;
 
-  std::unique_ptr<EventData> JuliaGenerator::operator()() {
-    auto event = std::make_unique<EventData>();
-    handle_->Run(*event);
-    return event;
-  }
+  std::unique_ptr<EventData> JuliaGenerator::operator()() { return handle_->Generate(); }
 
   JuliaConverter::JuliaConverter(const Metadata& metadata)
       : handle_(std::make_unique<JuliaFilterHandle<FilterType::kConverter>>(metadata)) {}
@@ -119,8 +139,7 @@ namespace cola::jl {
   JuliaConverter::~JuliaConverter() = default;
 
   std::unique_ptr<EventData> JuliaConverter::operator()(std::unique_ptr<EventData>&& event) {
-    handle_->Run(*event);
-    return std::move(event);
+    return handle_->Convert(*event);
   }
 
   JuliaWriter::JuliaWriter(const Metadata& metadata)
@@ -128,5 +147,26 @@ namespace cola::jl {
 
   JuliaWriter::~JuliaWriter() = default;
 
-  void JuliaWriter::operator()(std::unique_ptr<EventData>&& event) { handle_->Run(*event); }
+  void JuliaWriter::operator()(std::unique_ptr<EventData>&& event) { handle_->Write(*event); }
+
+  JuliaUnsafeGenerator::JuliaUnsafeGenerator(const Metadata& metadata)
+      : handle_(std::make_unique<JuliaFilterHandle<FilterType::kGenerator, true>>(metadata)) {}
+
+  JuliaUnsafeGenerator::~JuliaUnsafeGenerator() = default;
+
+  std::unique_ptr<EventData> JuliaUnsafeGenerator::operator()() {
+    auto event = std::make_unique<EventData>();
+    handle_->RunUnsafe(*event);
+    return event;
+  }
+
+  JuliaUnsafeConverter::JuliaUnsafeConverter(const Metadata& metadata)
+      : handle_(std::make_unique<JuliaFilterHandle<FilterType::kConverter, true>>(metadata)) {}
+
+  JuliaUnsafeConverter::~JuliaUnsafeConverter() = default;
+
+  std::unique_ptr<EventData> JuliaUnsafeConverter::operator()(std::unique_ptr<EventData>&& event) {
+    handle_->RunUnsafe(*event);
+    return std::move(event);
+  }
 }  // namespace cola::jl

@@ -26,6 +26,7 @@ const EventInitialState = Native.cola!EventIniState
 const Particle = Native.cola!Particle
 const LorentzVector = Native.cola!LorentzVectorImpl{Float64}
 const ParticleClass = Native.cola!ParticleClass
+Base.copy(event::EventData) = Native.copy_event(event)
 for (public_name, native_name) in (
     :PRODUCED => :cola!ParticleClass!kProduced,
     :ELASTIC_A => :cola!ParticleClass!kElasticA,
@@ -68,10 +69,14 @@ const position = Native.position
 abstract type Generator end
 abstract type Converter end
 abstract type Writer end
+"""Zero-copy generator. The event is borrowed and must not escape `generate!`."""
+abstract type UnsafeGenerator end
+"""Zero-copy converter. The event is borrowed and must not escape `convert!`."""
+abstract type UnsafeConverter end
 function generate! end
 function convert! end
 function write! end
-close!(::Union{Generator,Converter,Writer}) = nothing
+close!(::Union{Generator,Converter,Writer,UnsafeGenerator,UnsafeConverter}) = nothing
 
 struct Required end
 struct Parameter{T,D}
@@ -93,7 +98,7 @@ function _parameter_value(name, spec::Parameter{T}, metadata) where {T}
 end
 
 """Construct a filter type with the same keyword conversion used by COLA XML."""
-function construct(T::Type{<:Union{Generator,Converter,Writer}}; kwargs...)
+function construct(T::Type{<:Union{Generator,Converter,Writer,UnsafeGenerator,UnsafeConverter}}; kwargs...)
     schema = parameters(T)
     unknown = setdiff(keys(kwargs), keys(schema))
     isempty(unknown) || throw(ArgumentError("unknown parameters: $(join(unknown, ", "))"))
@@ -104,7 +109,8 @@ end
 include("bridge.jl")
 
 export EventData, EventInitialState, Particle, ParticleClass, LorentzVector,
-       Generator, Converter, Writer, generate!, convert!, write!, close!,
+       Generator, Converter, Writer, UnsafeGenerator, UnsafeConverter,
+       generate!, convert!, write!, close!,
        parameters, parameter, construct,
        particles, initial_state, initial_state_particles, position, momentum,
        particle_class, set_particle_class!, impact_parameter, set_impact_parameter!

@@ -40,10 +40,24 @@ int main(int argc, char** argv) {
     auto converter = factories.at("julia_converter")->Create(config);
     auto* native_address = event.get();
     event = (*dynamic_cast<cola::VConverter*>(converter.get()))(std::move(event));
-    Require(event.get() == native_address, "converter copied the event");
+    Require(event.get() != native_address, "safe converter borrowed the event");
     Require(event->particles.front().momentum.e == 10, "converter did not mutate native momentum");
     auto writer = factories.at("julia_writer")->Create(metadata("TestWriter"));
     (*dynamic_cast<cola::VWriter*>(writer.get()))(std::move(event));
+
+    auto retaining = factories.at("julia_converter")->Create(metadata("RetainingConverter"));
+    event = (*dynamic_cast<cola::VGenerator*>(generator.get()))();
+    event = (*dynamic_cast<cola::VConverter*>(retaining.get()))(std::move(event));
+    event = (*dynamic_cast<cola::VConverter*>(retaining.get()))(std::move(event));
+
+    auto unsafe_generator = factories.at("julia_unsafe_generator")->Create(metadata("UnsafeTestGenerator"));
+    event = (*dynamic_cast<cola::VGenerator*>(unsafe_generator.get()))();
+    auto unsafe_config = metadata("UnsafeScaleConverter");
+    unsafe_config["scale"] = "2";
+    auto unsafe_converter = factories.at("julia_unsafe_converter")->Create(unsafe_config);
+    native_address = event.get();
+    event = (*dynamic_cast<cola::VConverter*>(unsafe_converter.get()))(std::move(event));
+    Require(event.get() == native_address, "unsafe converter copied the event");
 
     auto nested_config = metadata("Nested.Inner.ScaleConverter");
     nested_config["scale"] = "3";

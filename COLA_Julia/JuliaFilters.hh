@@ -9,7 +9,7 @@
 
 namespace cola::jl {
 
-  template <FilterType Kind>
+  template <FilterType Kind, bool Unsafe = false>
   class JuliaFilterHandle;
 
   class JuliaGenerator final : public VGenerator {
@@ -54,10 +54,41 @@ namespace cola::jl {
     std::unique_ptr<JuliaFilterHandle<FilterType::kWriter>> handle_;
   };
 
+  class JuliaUnsafeGenerator final : public VGenerator {
+   public:
+    explicit JuliaUnsafeGenerator(const std::unordered_map<std::string, std::string>& metadata);
+
+    ~JuliaUnsafeGenerator() override;
+
+    std::unique_ptr<EventData> operator()() override;
+
+    inline static const std::string kName = "julia_unsafe_generator";
+
+   private:
+    std::unique_ptr<JuliaFilterHandle<FilterType::kGenerator, true>> handle_;
+  };
+
+  class JuliaUnsafeConverter final : public VConverter {
+   public:
+    explicit JuliaUnsafeConverter(const std::unordered_map<std::string, std::string>& metadata);
+
+    ~JuliaUnsafeConverter() override;
+
+    std::unique_ptr<EventData> operator()(std::unique_ptr<EventData>&& event) override;
+
+    inline static const std::string kName = "julia_unsafe_converter";
+
+   private:
+    std::unique_ptr<JuliaFilterHandle<FilterType::kConverter, true>> handle_;
+  };
+
   using JuliaGeneratorFactory = GenericFactory<JuliaGenerator>;
   using JuliaConverterFactory = GenericFactory<JuliaConverter>;
   using JuliaWriterFactory = GenericFactory<JuliaWriter>;
-  using JuliaModule = GenericModule<JuliaGeneratorFactory, JuliaConverterFactory, JuliaWriterFactory>;
+  using JuliaUnsafeGeneratorFactory = GenericFactory<JuliaUnsafeGenerator>;
+  using JuliaUnsafeConverterFactory = GenericFactory<JuliaUnsafeConverter>;
+  using JuliaModule = GenericModule<JuliaGeneratorFactory, JuliaConverterFactory, JuliaWriterFactory,
+                                    JuliaUnsafeGeneratorFactory, JuliaUnsafeConverterFactory>;
 
 }  // namespace cola::jl
 

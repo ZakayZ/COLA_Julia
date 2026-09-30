@@ -5,7 +5,8 @@ import COLA: convert!, generate!, write!
 
 struct TestGenerator <: Generator end
 
-function generate!(::TestGenerator, event)
+function generate!(::TestGenerator)
+    event = EventData()
     state = initial_state(event)
     set_energy!(state, 42.0)
 
@@ -18,7 +19,7 @@ function generate!(::TestGenerator, event)
     set_y!(particle_momentum, 2.0)
     set_z!(particle_momentum, 3.0)
     push!(particles(event), particle)
-    return nothing
+    return event
 end
 
 struct ScaleConverter <: Converter
@@ -33,7 +34,7 @@ function convert!(converter::ScaleConverter, event)
         vector = momentum(particle)
         set_energy!(vector, energy(vector) * converter.scale)
     end
-    return nothing
+    return event
 end
 
 struct ThrowingConverter <: Converter end
@@ -57,12 +58,29 @@ function convert!(filter::LifetimeConverter, event)
     GC.gc(true)
     filter.calls += 1
     set_energy!(initial_state(event), Float64(filter.calls))
+    return event
 end
 function COLA.close!(filter::LifetimeConverter)
     close_count[] += 1
     filter.fail_close && error("intentional close failure")
     return nothing
 end
+
+mutable struct RetainingConverter <: Converter
+    previous::Union{Nothing,EventData}
+end
+
+RetainingConverter() = RetainingConverter(nothing)
+
+function convert!(filter::RetainingConverter, event)
+    if !isnothing(filter.previous)
+        GC.gc(true)
+        energy(initial_state(filter.previous)) == 42.0 || error("retained event was not valid")
+    end
+    filter.previous = event
+    return event
+end
+
 struct LifetimeCheck <: Generator
     live::Int
     closed::Int
@@ -88,6 +106,28 @@ function write!(::TestWriter, event)
     energy(initial_state(event)) == 42.0 || error("writer received incorrect initial-state energy")
     length(particles(event)) == 1 || error("writer received incorrect particle count")
     energy(momentum(first(particles(event)))) == 10.0 || error("writer received unscaled momentum")
+    return nothing
+end
+
+struct UnsafeTestGenerator <: UnsafeGenerator end
+
+function generate!(::UnsafeTestGenerator, event)
+    set_energy!(initial_state(event), 42.0)
+    return nothing
+end
+
+struct UnsafeScaleConverter <: UnsafeConverter
+    scale::Float64
+end
+
+UnsafeScaleConverter(; scale::Real=1.0) = UnsafeScaleConverter(Float64(scale))
+COLA.parameters(::Type{UnsafeScaleConverter}) = (scale=parameter(Float64; default=1.0),)
+
+function convert!(converter::UnsafeScaleConverter, event)
+    for particle in particles(event)
+        vector = momentum(particle)
+        set_energy!(vector, energy(vector) * converter.scale)
+    end
     return nothing
 end
 

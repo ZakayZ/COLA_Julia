@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+    defaults:
+      run:
+        shell: bash
+    env:
+      CMAKE_PREFIX_PATH: ${{ runner.temp }}/cola-install
+      JULIA_PROJECT: ${{ runner.temp }}/calculation
+      JULIA_LOAD_PATH: '@:@stdlib'
+      JULIA_PKG_PRECOMPILE_AUTO: '0'
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Checkout COLA
+        uses: actions/checkout@v6
+        with:
+          repository: ZakayZ/COLA
+          ref: main
+          path: core-cola
+          persist-credentials: false
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.12'
+
+      - name: Install COLA
+        run: |
+          cmake -S core-cola -B "$RUNNER_TEMP/core-build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF \
+            -DCMAKE_INSTALL_PREFIX="$CMAKE_PREFIX_PATH" \
+            -DCMAKE_INSTALL_LIBDIR=lib
+          cmake --build "$RUNNER_TEMP/core-build"
+          cmake --install "$RUNNER_TEMP/core-build"
+
+      - name: Build Julia package and run Julia tests
+        run: |
+          julia --startup-file=no -e '
+            using Pkg
+            source = ENV["GITHUB_WORKSPACE"]
+            Pkg.develop([
+              PackageSpec(path=source),
+              PackageSpec(path=joinpath(source, "tests", "fixtures", "JuliaTestFilters")),
+            ])
+            Pkg.build("COLA"; verbose=true)
+            Pkg.test(["COLA", "JuliaTestFilters"])
+          '
+
+      - name: Test installed CMake package and dynamic plugin
+        working-directory: ${{ runner.temp }}
+        run: |
+          cmake -S "$GITHUB_WORKSPACE/tests/consumer" -B consumer-build \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build consumer-build
+          ctest --test-dir consumer-build --output-on-failure
