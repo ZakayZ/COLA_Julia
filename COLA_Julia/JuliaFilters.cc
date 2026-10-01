@@ -80,14 +80,23 @@ namespace cola::jl {
     }
 
     std::unique_ptr<EventData> Convert(const EventData& event) const {
-      return CopyEvent(Runtime::Instance().Invoke("_convert_event", object_.get(), event).get());
+      auto result = Runtime::Instance().Invoke("_convert_event_timed", object_.get(), event);
+      last_callback_nanoseconds_ = jl_unbox_uint64(jl_get_nth_field(result.get(), 1));
+      return CopyEvent(jl_get_nth_field(result.get(), 0));
     }
 
     void Write(const EventData& event) const { Runtime::Instance().Invoke("_write_event", object_.get(), event); }
 
     void RunUnsafe(EventData& event) const {
-      Runtime::Instance().Invoke("_process_unsafe_event", object_.get(), event);
+      if constexpr (Kind == FilterType::kConverter) {
+        auto result = Runtime::Instance().Invoke("_process_unsafe_event_timed", object_.get(), event);
+        last_callback_nanoseconds_ = jl_unbox_uint64(result.get());
+      } else {
+        Runtime::Instance().Invoke("_process_unsafe_event", object_.get(), event);
+      }
     }
+
+    std::uint64_t LastCallbackNanoseconds() const { return last_callback_nanoseconds_; }
 
    private:
     struct FilterDeleter {
@@ -124,6 +133,7 @@ namespace cola::jl {
     static auto CopyEvent(jl_value_t* value) { return std::make_unique<EventData>(*jlcxx::unbox<EventData*>(value)); }
 
     FilterPtr object_;
+    mutable std::uint64_t last_callback_nanoseconds_{};
   };
 
   JuliaGenerator::JuliaGenerator(const Metadata& metadata)
@@ -141,6 +151,8 @@ namespace cola::jl {
   std::unique_ptr<EventData> JuliaConverter::operator()(std::unique_ptr<EventData>&& event) {
     return handle_->Convert(*event);
   }
+
+  std::uint64_t JuliaConverter::LastCallbackNanoseconds() const { return handle_->LastCallbackNanoseconds(); }
 
   JuliaWriter::JuliaWriter(const Metadata& metadata)
       : handle_(std::make_unique<JuliaFilterHandle<FilterType::kWriter>>(metadata)) {}
@@ -169,4 +181,6 @@ namespace cola::jl {
     handle_->RunUnsafe(*event);
     return std::move(event);
   }
+
+  std::uint64_t JuliaUnsafeConverter::LastCallbackNanoseconds() const { return handle_->LastCallbackNanoseconds(); }
 }  // namespace cola::jl
