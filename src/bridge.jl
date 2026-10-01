@@ -49,21 +49,9 @@ function _event_result(event)
 end
 
 _generate_event(filter::Generator) = _event_result(generate!(filter))
-
-function _convert_event_timed(filter::Converter, event)
-    event = copy(event)
-    start = time_ns()
-    result = convert!(filter, event)
-    elapsed = time_ns() - start
-    return (_event_result(result), elapsed)
-end
+_convert_event(filter::Converter, event) = _event_result(convert!(filter, copy(event)))
 
 _write_event(filter::Writer, event) = write!(filter, copy(event))
 
 _process_unsafe_event(filter::UnsafeGenerator, event) = generate!(filter, event)
-
-function _process_unsafe_event_timed(filter::UnsafeConverter, event)
-    start = time_ns()
-    convert!(filter, event)
-    return time_ns() - start
-end
+_process_unsafe_event(filter::UnsafeConverter, event) = convert!(filter, event)

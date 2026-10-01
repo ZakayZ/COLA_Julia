@@ -26,15 +26,13 @@ namespace cola::jl {
     std::unique_ptr<JuliaFilterHandle<FilterType::kGenerator>> handle_;
   };
 
-  class JuliaConverter final : public VConverter, public VTimedConverter {
+  class JuliaConverter final : public VConverter {
    public:
     explicit JuliaConverter(const std::unordered_map<std::string, std::string>& metadata);
 
     ~JuliaConverter() override;
 
     std::unique_ptr<EventData> operator()(std::unique_ptr<EventData>&& event) override;
-
-    std::uint64_t LastCallbackNanoseconds() const override;
 
     inline static const std::string kName = "julia_converter";
 
@@ -70,15 +68,13 @@ namespace cola::jl {
     std::unique_ptr<JuliaFilterHandle<FilterType::kGenerator, true>> handle_;
   };
 
-  class JuliaUnsafeConverter final : public VConverter, public VTimedConverter {
+  class JuliaUnsafeConverter final : public VConverter {
    public:
     explicit JuliaUnsafeConverter(const std::unordered_map<std::string, std::string>& metadata);
 
     ~JuliaUnsafeConverter() override;
 
     std::unique_ptr<EventData> operator()(std::unique_ptr<EventData>&& event) override;
-
-    std::uint64_t LastCallbackNanoseconds() const override;
 
     inline static const std::string kName = "julia_unsafe_converter";
 
