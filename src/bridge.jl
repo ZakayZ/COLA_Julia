@@ -23,13 +23,12 @@ function _resolve_filter_type(path::String)
     return T
 end
 
-function _create_filter(kind::UInt8, keys, values)
+function _create_filter(kind::UInt8, keys, values, expected)
     metadata = Dict(Symbol(String(k)) => String(v) for (k, v) in zip(keys, values))
     path = pop!(metadata, :filter, "")
     isempty(path) && throw(ArgumentError("Julia filter requires 'filter'"))
     pop!(metadata, :name, nothing) # COLA's factory selector, not a user parameter.
     T = _resolve_filter_type(path)
-    expected = (Generator, Converter, Writer)[Int(kind) + 1]
     T <: expected || error("filter '$path' has the wrong kind")
     # Package loading above may introduce new schema and constructor methods.
     object = Base.invokelatest(construct, T; metadata...)
@@ -38,6 +37,21 @@ function _create_filter(kind::UInt8, keys, values)
     return object
 end
 
-_process_event(filter::Generator, event) = generate!(filter, event)
-_process_event(filter::Converter, event) = convert!(filter, event)
-_process_event(filter::Writer, event) = write!(filter, event)
+_create_filter(kind::UInt8, keys, values) =
+    _create_filter(kind, keys, values, (Generator, Converter, Writer)[Int(kind) + 1])
+
+_create_unsafe_filter(kind::UInt8, keys, values) =
+    _create_filter(kind, keys, values, (UnsafeGenerator, UnsafeConverter)[Int(kind) + 1])
+
+function _event_result(event)
+    event isa EventData || throw(ArgumentError("Julia filter must return EventData"))
+    return event
+end
+
+_generate_event(filter::Generator) = _event_result(generate!(filter))
+_convert_event(filter::Converter, event) = _event_result(convert!(filter, copy(event)))
+
+_write_event(filter::Writer, event) = write!(filter, copy(event))
+
+_process_unsafe_event(filter::UnsafeGenerator, event) = generate!(filter, event)
+_process_unsafe_event(filter::UnsafeConverter, event) = convert!(filter, event)
